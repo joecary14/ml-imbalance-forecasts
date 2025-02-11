@@ -6,7 +6,6 @@ from keras._tf_keras.keras.models import Sequential, load_model
 from keras._tf_keras.keras.layers import LSTM, Dense, Dropout
 from keras._tf_keras.keras.callbacks import EarlyStopping
 from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import StandardScaler
 
 def create_sequences(X: pd.DataFrame, y: pd.Series, window_size: int):
     """
