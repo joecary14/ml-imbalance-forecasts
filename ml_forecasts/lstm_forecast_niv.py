@@ -1,37 +1,37 @@
 import numpy as np
 import pandas as pd
-from math import sqrt
 
+import ml_forecasts.preprocessing as preprocessing
+import misc.plotting as plotting
+
+from math import sqrt
 from keras._tf_keras.keras.models import Sequential, load_model
 from keras._tf_keras.keras.layers import LSTM, Dense, Dropout
 from keras._tf_keras.keras.callbacks import EarlyStopping
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 
-def create_sequences(X: pd.DataFrame, y: pd.Series, window_size: int):
-    """
-    Transforms the data into sequences for an LSTM model.
+def run_model(independent_variables_df, dependent_variable_series, window_size):
+    scaled_independent_variables_df = preprocessing.scale_independent_variables(independent_variables_df)
+    scaled_dependent_variable, dependent_variable_scaler = preprocessing.scale_dependent_variable(dependent_variable_series)
+    x_seq, y_seq = preprocessing.create_sequences(scaled_independent_variables_df, scaled_dependent_variable, 3)
+    model = build_lstm_model((x_seq.shape[1], x_seq.shape[2]), 50, 0.2, 20)
+    model, history = train_lstm_model(scaled_independent_variables_df, scaled_dependent_variable, 3)
     
-    For each index i, a sequence of features from i to i+window_size-1 is used 
-    to predict the target at i+window_size.
+    x_all, y_all = preprocessing.create_sequences(scaled_independent_variables_df, scaled_dependent_variable, window_size)
+    y_pred_all = model.predict(x_all)
+    y_pred_all_unscaled = dependent_variable_scaler.inverse_transform(y_pred_all.reshape(-1, 1)).flatten()
+    y_all_unscaled = dependent_variable_scaler.inverse_transform(y_all.reshape(-1, 1)).flatten()
     
-    Parameters:
-        X (pd.DataFrame): DataFrame of independent variables.
-        y (pd.Series): Series of the dependent variable.
-        window_size (int): Number of time steps per sequence.
+    mse_all = np.mean((y_all_unscaled - y_pred_all_unscaled) ** 2)
+    rmse_all = np.sqrt(mse_all)
+    r2 = r2_score(y_all_unscaled, y_pred_all_unscaled)
+    print("Performance on entire dataset:")
+    print("MSE:", mse_all)
+    print("RMSE:", rmse_all)
+    print("R^2:", r2)
     
-    Returns:
-        X_seq (np.ndarray): 3D array of shape (num_sequences, window_size, num_features).
-        y_seq (np.ndarray): 1D array of targets corresponding to each sequence.
-    """
-    X_values = X.values
-    y_values = y.values
-    X_seq, y_seq = [], []
-    
-    for i in range(len(X_values) - window_size):
-        X_seq.append(X_values[i:i+window_size])
-        y_seq.append(y_values[i+window_size])
-    
-    return np.array(X_seq), np.array(y_seq)
+    # Plot predictions vs. actual values using your plotting utility
+    plotting.plot_predictions_vs_actuals(y_pred_all_unscaled, y_all_unscaled)
 
 def build_lstm_model(input_shape, lstm_units=50, dropout_rate=0.2, dense_units=20):
     """
@@ -82,7 +82,7 @@ def train_lstm_model(X_train: pd.DataFrame,
         model (tf.keras.Model): The trained LSTM model.
         history (History): Training history returned by model.fit().
     """
-    X_seq, y_seq = create_sequences(X_train, y_train, window_size)
+    X_seq, y_seq = preprocessing.create_sequencescreate_sequences(X_train, y_train, window_size)
     input_shape = (X_seq.shape[1], X_seq.shape[2])
     
     model = build_lstm_model(input_shape, lstm_units, dropout_rate, dense_units)
@@ -110,7 +110,7 @@ def evaluate_lstm_model(model, X_test: pd.DataFrame, y_test: pd.Series, window_s
     Returns:
         metrics (dict): Dictionary containing 'mse' and 'rmse'.
     """
-    X_seq, y_seq = create_sequences(X_test, y_test, window_size)
+    X_seq, y_seq = preprocessing.create_sequences(X_test, y_test, window_size)
     y_pred = model.predict(X_seq)
     
     mse = mean_squared_error(y_seq, y_pred)
