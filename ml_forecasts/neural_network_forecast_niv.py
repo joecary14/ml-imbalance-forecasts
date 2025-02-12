@@ -97,7 +97,7 @@ def train_lstm_model(X_train: pd.DataFrame,
                         verbose=1)
     return model, history
 
-def evaluate_lstm_model(model, X_test: pd.DataFrame, y_test: pd.Series, window_size: int):
+def evaluate_lstm_model(model, X_test: pd.DataFrame, y_test: pd.Series, window_size: int):   
     """
     Evaluates the trained LSTM model using Mean Squared Error and RMSE.
     

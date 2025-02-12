@@ -16,6 +16,7 @@ async def get_training_data(database_name, dependent_variable_database_name, ind
                             dependent_variable_table_name, dependent_variable_column_to_download, dependent_variable_rows_to_drop):
     db_connection = await db_general.try_connect_to_database(database_name)
     independent_variables_df = await db_downloader.fetch_table_from_database(db_connection, independent_variable_table_name)
+    independent_variables_df.drop(columns=["id"], inplace=True)
     settlement_dates_and_periods = datetime_functions.get_list_of_settlement_dates_and_periods(start_date, end_date)
     await db_connection.close()
     db_connection = await db_general.try_connect_to_database(dependent_variable_database_name)
