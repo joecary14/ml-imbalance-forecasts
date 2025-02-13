@@ -13,8 +13,6 @@ from sklearn.metrics import mean_squared_error, r2_score
 def run_model(independent_variables_df, dependent_variable_series, window_size):
     scaled_independent_variables_df = preprocessing.scale_independent_variables(independent_variables_df)
     scaled_dependent_variable, dependent_variable_scaler = preprocessing.scale_dependent_variable(dependent_variable_series)
-    x_seq, y_seq = preprocessing.create_sequences(scaled_independent_variables_df, scaled_dependent_variable, 3)
-    model = build_lstm_model((x_seq.shape[1], x_seq.shape[2]), 50, 0.2, 20)
     model, history = train_lstm_model(scaled_independent_variables_df, scaled_dependent_variable, 3)
     
     x_all, y_all = preprocessing.create_sequences(scaled_independent_variables_df, scaled_dependent_variable, window_size)
@@ -33,7 +31,7 @@ def run_model(independent_variables_df, dependent_variable_series, window_size):
     # Plot predictions vs. actual values using your plotting utility
     plotting.plot_predictions_vs_actuals(y_pred_all_unscaled, y_all_unscaled)
 
-def build_lstm_model(input_shape, lstm_units=50, dropout_rate=0.2, dense_units=20):
+def build_lstm_model(input_shape, number_of_lstm_layers = 1,lstm_units=50, dropout_rate=0.2, dense_units=20):
     """
     Constructs and compiles an LSTM model.
     
@@ -47,6 +45,10 @@ def build_lstm_model(input_shape, lstm_units=50, dropout_rate=0.2, dense_units=2
         model (tf.keras.Model): Compiled LSTM model.
     """
     model = Sequential()
+    for layer in range(number_of_lstm_layers-1):
+        model.add(LSTM(lstm_units, input_shape=input_shape, return_sequences=True))
+        model.add(Dropout(dropout_rate))
+    
     model.add(LSTM(lstm_units, input_shape=input_shape))
     model.add(Dropout(dropout_rate))
     model.add(Dense(dense_units, activation='relu'))
@@ -82,7 +84,7 @@ def train_lstm_model(X_train: pd.DataFrame,
         model (tf.keras.Model): The trained LSTM model.
         history (History): Training history returned by model.fit().
     """
-    X_seq, y_seq = preprocessing.create_sequencescreate_sequences(X_train, y_train, window_size)
+    X_seq, y_seq = preprocessing.create_sequences(X_train, y_train, window_size)
     input_shape = (X_seq.shape[1], X_seq.shape[2])
     
     model = build_lstm_model(input_shape, lstm_units, dropout_rate, dense_units)
