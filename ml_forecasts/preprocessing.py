@@ -3,6 +3,7 @@ import numpy as np
 
 from sklearn.preprocessing import StandardScaler
 
+
 def scale_independent_variables(independent_variables_df):
     scaler = StandardScaler()
     scaled_independent_variables = scaler.fit_transform(independent_variables_df)

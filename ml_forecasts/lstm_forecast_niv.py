@@ -9,29 +9,34 @@ from keras._tf_keras.keras.models import Sequential, load_model
 from keras._tf_keras.keras.layers import LSTM, Dense, Dropout
 from keras._tf_keras.keras.callbacks import EarlyStopping
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 
-def run_model(independent_variables_df, dependent_variable_series, window_size):
+def run_model(independent_variables_df, dependent_variable_series, window_size, 
+              test_split, number_of_lstm_layers, lstm_units_per_layer, dropout_rate, dense_units, batch_size, epochs, validation_split):
     scaled_independent_variables_df = preprocessing.scale_independent_variables(independent_variables_df)
     scaled_dependent_variable, dependent_variable_scaler = preprocessing.scale_dependent_variable(dependent_variable_series)
-    model, history = train_lstm_model(scaled_independent_variables_df, scaled_dependent_variable, 3)
+    X_train, X_test, y_train, y_test = train_test_split(
+        scaled_independent_variables_df, scaled_dependent_variable, test_size=test_split, shuffle=False)
+    model, history = train_lstm_model(
+        X_train, y_train, window_size, number_of_lstm_layers, lstm_units_per_layer, dropout_rate, dense_units, batch_size, epochs, validation_split)
     
-    x_all, y_all = preprocessing.create_sequences(scaled_independent_variables_df, scaled_dependent_variable, window_size)
-    y_pred_all = model.predict(x_all)
-    y_pred_all_unscaled = dependent_variable_scaler.inverse_transform(y_pred_all.reshape(-1, 1)).flatten()
-    y_all_unscaled = dependent_variable_scaler.inverse_transform(y_all.reshape(-1, 1)).flatten()
+    test_metrics = evaluate_lstm_model(model, X_test, y_test, window_size)
+    print("Test set performance:")
+    print("MSE:", test_metrics['mse'])
+    print("RMSE:", test_metrics['rmse'])
     
-    mse_all = np.mean((y_all_unscaled - y_pred_all_unscaled) ** 2)
-    rmse_all = np.sqrt(mse_all)
-    r2 = r2_score(y_all_unscaled, y_pred_all_unscaled)
-    print("Performance on entire dataset:")
-    print("MSE:", mse_all)
-    print("RMSE:", rmse_all)
-    print("R^2:", r2)
+    x_test_seq, y_test_seq = preprocessing.create_sequences(X_test, y_test, window_size)
+    y_pred_test = model.predict(x_test_seq)
     
-    # Plot predictions vs. actual values using your plotting utility
-    plotting.plot_predictions_vs_actuals(y_pred_all_unscaled, y_all_unscaled)
+    y_pred_test_unscaled = dependent_variable_scaler.inverse_transform(y_pred_test.reshape(-1, 1)).flatten()
+    y_test_unscaled = dependent_variable_scaler.inverse_transform(y_test_seq.reshape(-1, 1)).flatten()
+    
+    r2 = r2_score(y_test_unscaled, y_pred_test_unscaled)
+    print("Test R^2:", r2)
+    
+    plotting.plot_predictions_vs_actuals(y_pred_test_unscaled, y_test_unscaled)
 
-def build_lstm_model(input_shape, number_of_lstm_layers = 1,lstm_units=50, dropout_rate=0.2, dense_units=20):
+def build_lstm_model(input_shape, number_of_lstm_layers, lstm_units_per_layer, dropout_rate, dense_units):
     """
     Constructs and compiles an LSTM model.
     
@@ -46,10 +51,10 @@ def build_lstm_model(input_shape, number_of_lstm_layers = 1,lstm_units=50, dropo
     """
     model = Sequential()
     for layer in range(number_of_lstm_layers-1):
-        model.add(LSTM(lstm_units, input_shape=input_shape, return_sequences=True))
+        model.add(LSTM(lstm_units_per_layer, input_shape=input_shape, return_sequences=True))
         model.add(Dropout(dropout_rate))
     
-    model.add(LSTM(lstm_units, input_shape=input_shape))
+    model.add(LSTM(lstm_units_per_layer, input_shape=input_shape))
     model.add(Dropout(dropout_rate))
     model.add(Dense(dense_units, activation='relu'))
     model.add(Dense(1))  # Single output for regression
@@ -60,12 +65,13 @@ def build_lstm_model(input_shape, number_of_lstm_layers = 1,lstm_units=50, dropo
 def train_lstm_model(X_train: pd.DataFrame,
                      y_train: pd.Series,
                      window_size: int,
-                     lstm_units=50,
-                     dropout_rate=0.2,
-                     dense_units=20,
-                     batch_size=32,
-                     epochs=100,
-                     validation_split=0.2):
+                     number_of_lstm_layers,
+                     lstm_units_per_layer,
+                     dropout_rate,
+                     dense_units,
+                     batch_size,
+                     epochs,
+                     validation_split):
     """
     Prepares sequences from the training data, builds the LSTM model, and trains it.
     
@@ -73,7 +79,7 @@ def train_lstm_model(X_train: pd.DataFrame,
         X_train (pd.DataFrame): Training data for independent variables.
         y_train (pd.Series): Training data for the dependent variable.
         window_size (int): Number of time steps per sequence.
-        lstm_units (int): Number of units in the LSTM layer.
+        lstm_units_per_layer (int): Number of units in the LSTM layer.
         dropout_rate (float): Dropout rate after the LSTM layer.
         dense_units (int): Number of units in the Dense layer following LSTM.
         batch_size (int): Batch size for training.
@@ -87,7 +93,9 @@ def train_lstm_model(X_train: pd.DataFrame,
     X_seq, y_seq = preprocessing.create_sequences(X_train, y_train, window_size)
     input_shape = (X_seq.shape[1], X_seq.shape[2])
     
-    model = build_lstm_model(input_shape, lstm_units, dropout_rate, dense_units)
+    model = build_lstm_model(
+        input_shape, number_of_lstm_layers = number_of_lstm_layers, lstm_units_per_layer = lstm_units_per_layer, 
+        dropout_rate = dropout_rate, dense_units = dense_units)
     
     early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
     

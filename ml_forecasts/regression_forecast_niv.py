@@ -13,7 +13,7 @@ import database_interaction.database_general as db_general
 import misc.datetime_functions as datetime_functions
 
 async def get_training_data(database_name, dependent_variable_database_name, independent_variable_table_name, start_date, end_date, 
-                            dependent_variable_table_name, dependent_variable_column_to_download, dependent_variable_rows_to_drop):
+                            dependent_variable_table_name, dependent_variable_column_to_download, dependent_variable_rows_to_drop=0):
     db_connection = await db_general.try_connect_to_database(database_name)
     independent_variables_df = await db_downloader.fetch_table_from_database(db_connection, independent_variable_table_name)
     independent_variables_df.drop(columns=["id"], inplace=True)
