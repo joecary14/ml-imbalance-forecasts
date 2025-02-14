@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import ml_forecasts.preprocessing as preprocessing
 import misc.plotting as plotting
@@ -8,20 +7,26 @@ from keras._tf_keras.keras.models import Sequential
 from keras._tf_keras.keras.layers import Conv1D, Dropout, Flatten, Dense
 from keras._tf_keras.keras.callbacks import EarlyStopping
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 
-def run_model(independent_variables_df, dependent_variable_series, window_size):
+def run_model(independent_variables_df, dependent_variable_series, 
+              window_size, test_split, filters, kernel_size, dilations, dropout_rate, dense_units, batch_size, epochs, validation_split):
+    preprocessing.check_sufficient_data(independent_variables_df, batch_size, epochs)
+    
     scaled_independent_variables_df = preprocessing.scale_independent_variables(independent_variables_df)
     scaled_dependent_variable, dependent_variable_scaler = preprocessing.scale_dependent_variable(dependent_variable_series)
-    model, history = train_tcn_model(scaled_independent_variables_df, scaled_dependent_variable, window_size)
-    metrics = evaluate_tcn_model(model, scaled_independent_variables_df, scaled_dependent_variable, window_size)
-    print(f'{key} : {value}' for key, value in metrics.items())
-    y_pred_scaled, y_true_scaled = predict_tcn_model(model, scaled_independent_variables_df, scaled_dependent_variable, window_size)
+    X_train, X_test, y_train, y_test = train_test_split(
+        scaled_independent_variables_df, scaled_dependent_variable, test_size=test_split, shuffle=False)
+    model, history = train_tcn_model(X_train, y_train, window_size, filters, kernel_size, dilations, dropout_rate, dense_units, batch_size, epochs, validation_split)
+    metrics = evaluate_tcn_model(model, X_test, y_test, window_size)
+    for key, value in metrics.items():
+        print(f'{key} : {value}')
+    y_pred_scaled, y_true_scaled = predict_tcn_model(model, X_test, y_test, window_size)
     y_pred = dependent_variable_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
     y_true = dependent_variable_scaler.inverse_transform(y_true_scaled.reshape(-1, 1)).flatten()
     plotting.plot_predictions_vs_actuals(y_pred, y_true)
     
-
-def build_tcn_model(input_shape, filters=64, kernel_size=2, dilations=[1,2,4,8], dropout_rate=0.2, dense_units=20):
+def build_tcn_model(input_shape, filters, kernel_size, dilations, dropout_rate, dense_units):
     """
     Constructs and compiles a TCN model.
     
@@ -61,8 +66,8 @@ def build_tcn_model(input_shape, filters=64, kernel_size=2, dilations=[1,2,4,8],
     return model
 
 def train_tcn_model(X_train: pd.DataFrame, y_train: pd.Series, window_size: int,
-                    filters=64, kernel_size=2, dilations=[1,2,4,8], dropout_rate=0.2, dense_units=20,
-                    batch_size=32, epochs=100, validation_split=0.2):
+                    filters, kernel_size, dilations, dropout_rate, dense_units,
+                    batch_size, epochs, validation_split):
     """
     Prepares sequences from training data, builds the TCN model, and trains it.
     
