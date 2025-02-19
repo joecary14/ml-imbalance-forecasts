@@ -12,9 +12,9 @@ import numpy as np
 
 from sklearn.metrics import r2_score
 
-test_start_date = '2025-01-01'
+test_start_date = '2024-09-24'
 test_end_date = '2025-02-07'
-number_of_rows_to_drop = 3
+number_of_rows_to_drop = 0
 window_size = 48
 test_split = 0.2
 number_of_lstm_layers = 3
@@ -40,6 +40,8 @@ async def main():
     independent_variables_df, dependent_variable_series = await regression_forecast_niv.get_training_data(
         ct.DatabaseNames.NIV_CHASING.value, ct.DatabaseNames.SYSTEM_PROPERTIES.value, ct.TableNames.NIV_FORECAST_TRAINING_DATA.value, 
         test_start_date, test_end_date, ct.TableNames.SYSTEM_IMBALANCE.value, ct.ColumnHeaders.NET_IMBALANCE_VOLUME.value, number_of_rows_to_drop)
+    
+    tcn_forecast.run_model(independent_variables_df, dependent_variable_series, window_size, test_split, tcn_filters, tcn_kernel_size, tcn_dilations, dropout_rate, dense_units, batch_size, epochs, validation_split)
     
     best_hp, best_model, best_loss = tune_hyperparameters.bayesian_optimization_tuning_model(lstm_forecast_niv.build_lstm_model, hyperparameter_space, 
         independent_variables_df, dependent_variable_series, test_split, window_size, batch_size, epochs, validation_split, max_iterations)
