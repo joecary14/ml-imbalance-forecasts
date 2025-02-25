@@ -84,6 +84,7 @@ def train_gru_model(X_train: pd.DataFrame,
                         batch_size=batch_size,
                         epochs=epochs,
                         validation_split=validation_split,
+                        shuffle=False,
                         callbacks=[early_stopping],
                         verbose=1)
     return model, history

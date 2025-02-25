@@ -44,3 +44,8 @@ class TableNames(Enum):
     TEST = 'test'
     TLMS = 'tlm_data'
     TSDF = 'transmission_system_demand_forecast'
+    
+class ModelTypes(Enum):
+    LINEAR_REGRESSION = 'LinearRegression'
+    QUANTILE_REGRESSION = 'QuantileRegression'
+    RANDOM_FOREST = 'RandomForest'

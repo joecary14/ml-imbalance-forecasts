@@ -25,18 +25,11 @@ async def get_training_data(database_name, dependent_variable_database_name, ind
     dependent_variable = order_df_by_settlement_date_and_period(dependent_variable_df)
     dependent_variable = dependent_variable.iloc[dependent_variable_rows_to_drop:]
     independent_variables = order_df_by_settlement_date_and_period(independent_variables_df)
-    excel_handler.open_excel_without_saving(independent_variables)
-    excel_handler.open_excel_without_saving(dependent_variable)
     independent_variables = independent_variables.drop(columns=[ct.ColumnHeaders.DATE_PERIOD_PRIMARY_KEY.value])
     
-    dependent_variable_series = pd.Series(dependent_variable_df[dependent_variable_column_to_download])
+    dependent_variable_series = pd.Series(dependent_variable[dependent_variable_column_to_download])
     
     return independent_variables, dependent_variable_series
-
-def check_sufficient_data(X, batch_size, epochs):
-    steps_per_epoch = math.ceil(len(X) / batch_size)
-    if len(X) < steps_per_epoch * epochs:
-        raise ValueError("Not enough data for the given batch size and number of epochs.")
 
 def scale_independent_variables(independent_variables_df):
     scaler = StandardScaler()
@@ -80,3 +73,8 @@ def order_df_by_settlement_date_and_period(df):
     df_copy.reset_index(drop=True, inplace=True)
     
     return df_copy
+
+def drop_dummy_variables(X: pd.DataFrame):
+    dummy_columns = X.columns[X.columns.str.contains("settlement|day|month", case=False)]
+    X_copy = X.copy()
+    return X_copy.drop(columns=dummy_columns)

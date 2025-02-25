@@ -4,11 +4,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, QuantileRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 import misc.plotting as plotting
+import misc.constants as ct
 
 def run_regression_model(X: pd.DataFrame,
                           y: pd.Series,
@@ -25,10 +26,12 @@ def train_regression_model(X_train: pd.DataFrame,
                            y_train: pd.Series,
                            model_type: str,
                            **model_params):
-    if model_type == 'RandomForest':
+    if model_type == ct.ModelTypes.RANDOM_FOREST.value:
         regressor = RandomForestRegressor(**model_params)
-    elif model_type == 'LinearRegression':
+    elif model_type == ct.ModelTypes.LINEAR_REGRESSION.value:
         regressor = LinearRegression(**model_params)
+    elif model_type == ct.ModelTypes.QUANTILE_REGRESSION.value:
+        regressor = QuantileRegressor(**model_params)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 

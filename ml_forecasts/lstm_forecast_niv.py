@@ -12,7 +12,6 @@ from sklearn.model_selection import train_test_split
 
 def run_model(independent_variables_df, dependent_variable_series, window_size, 
               test_split, number_of_lstm_layers, lstm_units_per_layer, dropout_rate, dense_units, batch_size, epochs, validation_split):
-    preprocessing.check_sufficient_data(independent_variables_df, batch_size, epochs)
     scaled_independent_variables_df = preprocessing.scale_independent_variables(independent_variables_df)
     scaled_dependent_variable, dependent_variable_scaler = preprocessing.scale_dependent_variable(dependent_variable_series)
     X_train, X_test, y_train, y_test = train_test_split(
@@ -75,6 +74,7 @@ def train_lstm_model(X_train: pd.DataFrame,
                         batch_size=batch_size,
                         epochs=epochs,
                         validation_split=validation_split,
+                        shuffle=False,
                         callbacks=[early_stopping],
                         verbose=1)
     return model, history
